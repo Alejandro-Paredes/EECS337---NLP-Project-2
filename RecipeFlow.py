@@ -1,8 +1,8 @@
 from nltk import word_tokenize
 
-allIngredients = ['chicken','water'];
-allCookActions = ['place','add','bring','reduce','cook','simmer','shred','combine','stir','turn','off','cover'];
-allUtensils = ['bag','heat','pot'];
+allIngredients = ['chicken','water','butter','onion','chilies','seasoning'];
+allCookActions = ['place','add','bring','reduce','cook','simmer','shred','combine','stir','turn','off','cover','heat'];
+allUtensils = ['bag','heat','pot','skillet'];
 allMeasurements = ['pieces','large','medium','low','medium-low','medium-high']
 
 class RecipeFlowchart:
@@ -204,6 +204,7 @@ class Node:
 		self.nextNodes.append(node);
 
 istring = "Place the chicken in a large pot and add water to cover. Bring to a boil over high heat, then reduce the heat to medium-low, cover, and simmer until the chicken pieces are no longer pink, about 10 minutes.";
+istring = "Heat the butter in a skillet over medium heat. Stir in the onion; cook and stir until the onion has softened and turned translucent, about 5 minutes. Add the shredded chicken, chopped green chilies, taco seasoning, half of the bunch of chopped green onion, and water."
 
 istring = istring.lower();
 istring = word_tokenize(istring);
