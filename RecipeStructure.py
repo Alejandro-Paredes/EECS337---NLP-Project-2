@@ -1,61 +1,105 @@
 class Recipe:
 	firstStep = None;			# The first step in our recipe. A Step object
 
-	def __init__(self, step):		# Constructor
-		self.firstStep = step;
+	def __init__(self):		# Constructor
+		self.firstStep = None;
 
 	def __str__ (self):
 		rv = "";
-		currentStep = firstStep:
+		currentStep = self.firstStep;
 		while currentStep != None:
 			rv += str(currentStep);
 			currentStep = currentStep.nextStep;
 		return rv;
 
-	def addStep(inputStep):			# Build the recipes by adding steps to the end
-		lastStep = firstStep;
-		while lastStep != None:
-			lastStep = firstStep.nextStep;
-		inputStep.StepNumber = lastStep.StepNumber + 1;
-		lastStep.nextStep = inputStep;
+	def addStep(self, inputStep):			# Build the recipes by adding steps to the end
+		if self.firstStep == None:
+			self.firstStep = inputStep;
+		else:
+			lastStep = self.firstStep;
+			while lastStep.nextStep != None:
+				lastStep = lastStep.nextStep;
+			inputStep.StepNumber = lastStep.StepNumber + 1;
+			lastStep.nextStep = inputStep;
 
-	def deleteLastStep():			# Delete the final step
-		Step lastStep = firstStep;
+	def deleteLastStep(self):			# Delete the final step
+		lastStep = self.firstStep;
 		while lastStep != None:
-			lastStep = firstStep.nextStep;
+			lastStep = self.firstStep.nextStep;
 		lastStep.previousStep.nextStep = None;
 
+	def getLastStep (self):
+		lastStep = self.firstStep;
+		while not lastStep.nextStep == None:
+			lastStep = lastStep.nextStep;
+		return lastStep;
+
 class Step:
+	name = "";
 	previousStep = None;		# The step immediately preceding
 	nextStep = None;			# The step immediately after
 	StepNumber = 0;				# Which step are we on
 	ingredients = [];			# List of all ingredients used in this step
 	actions = [];				# List of every action in this step
-	time = None; 				# Time object representing the length of the step
+	times = []; 				# Time object representing the length of the step
+	unassigneduten = None;
+
+	def __init__ (self, iname):
+		self.name = iname;
+		self.previousStep = None;
+		self.nextStep = None;
+		self.StepNumber = 0;
+		self.ingredients = [];
+		self.actions = [];
+		self.time = [];
+		self.unassigneduten = None;
 
 	def __str__ (self):
-		rv = "Step " + StepNumber + "\n";
-		rv += "Combine: \n";
-		for i in ingredients:
+		rv = "\nStep " + str(self.StepNumber) + "\n";
+		if len(self.ingredients) > 0:
+			rv += "Ingredients: \n";
+		for i in self.ingredients:
 			rv += "\t" + str(i) + "\n";
-		rv += "And then: \n"
-		for a in actions:
+		if len(self.actions) > 0:
+			rv += "Actions: \n"
+		for a in self.actions:
 			rv += "\t" + str(a) + "\n";
-		rv += "For " + str(time);
-		return rv;
+		if not self.unassigneduten == None:
+			rv += "Utensil: \n"
+			rv += "\t" + str(self.unassigneduten) + "\n";
+		if len(self.time) > 0:
+			rv += "Time: \n";
+		for t in self.time:
+			rv += "\t" + str(t) + "\n";
+		return rv + "\n";
 
-	def AddIngredient(inputIngredient):		# Add an ingredient
-		ingredients.append(inputIngredient);
+	def addIngredient(self, inputIngredient):		# Add an ingredient
+		self.ingredients.append(inputIngredient);
 
-	def AddAction(inputAction):				# Add an action
-		actions.append(inputAction);
+	def addAction(self, inputAction):				# Add an action
+		if not self.unassigneduten == None:
+			if inputAction.utensil == None:
+				inputAction.utensil = self.unassigneduten;
+				self.unassigneduten = None;
+		self.actions.append(inputAction);
 
-	def SetTime(time):						# How long the step takes
-		self.time = time;
 
-	def changeStyle(tag):					# Change all ingredients in the step to some style
+	def addTime(self,time):						# How long the step takes
+		self.time.append(time);
+
+	def addUtensil(self,uten):
+		if len(self.actions) > 0:
+			for a in self.actions:
+				if a.utensil == None:
+					a.utensil = uten;
+					return;
+			self.unassigneduten = uten;
+		else:
+			self.unassigneduten = uten;
+
+	def changeStyle(self,tag):					# Change all ingredients in the step to some style
 		for ingred in ingredients:
-			if !ingred.isTag(tag):
+			if not ingred.isTag(tag):
 				ingred.getTagSubstitute(tag);
 
 class Ingredient:
@@ -95,7 +139,10 @@ class Action:
 		self.name = iname;
 
 	def __str__ (self):
-		return self.name + " with a " + str(utensil);
+		if self.utensil == None:
+			return self.name;
+		else:
+			return self.name + " with a " + str(self.utensil);
 
 class Unit:
 	name = ""; 				# Ie cups, gallons, kilograms
@@ -106,8 +153,17 @@ class Form:
 class Utensil:
 	name = ""; 				# From list
 
+	def __init__ (self, iname):
+		self.name = iname;
+
 	def __str__ (self):
 		return self.name;
 
 class Time:						# TODO
 	name = "";
+
+	def __init__ (self, iname):
+		self.name = iname;
+
+	def __str__ (self):
+		return self.name;
