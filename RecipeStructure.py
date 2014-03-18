@@ -10,6 +10,16 @@ class Recipe:
 		while currentStep != None:
 			rv += str(currentStep);
 			currentStep = currentStep.nextStep;
+		rv += self.getJSON();
+		return rv;
+
+	def getJSON (self):
+		rv = "{\"steps\": [";
+		lastStep = self.firstStep;
+		while not lastStep.nextStep == None:
+			rv += lastStep.getJSON() + ",";
+			lastStep = lastStep.nextStep;
+		rv += "]}";
 		return rv;
 
 	def addStep(self, inputStep):			# Build the recipes by adding steps to the end
@@ -21,12 +31,6 @@ class Recipe:
 				lastStep = lastStep.nextStep;
 			inputStep.StepNumber = lastStep.StepNumber + 1;
 			lastStep.nextStep = inputStep;
-
-	def deleteLastStep(self):			# Delete the final step
-		lastStep = self.firstStep;
-		while lastStep != None:
-			lastStep = self.firstStep.nextStep;
-		lastStep.previousStep.nextStep = None;
 
 	def getLastStep (self):
 		lastStep = self.firstStep;
@@ -73,6 +77,24 @@ class Step:
 			rv += "\t" + str(t) + "\n";
 		return rv + "\n";
 
+	def getJSON (self):
+		rv = "{\"ingredients\": [";
+		for i in self.ingredients:
+			rv += i.getJSON() + ",";
+		rv += "],";
+		rv += "\"cooking method\": [";
+		for a in self.actions:
+			rv += "\"" + a.name + "\",";
+		rv += "],";
+		rv += "\"cooking tools\": [";
+		for a in self.actions:
+			if a.utensil != None:
+				rv += "\"" +  a.utensil.name + "\"";
+		rv += "],}";
+		return rv;
+
+
+
 	def addIngredient(self, inputIngredient):		# Add an ingredient
 		self.ingredients.append(inputIngredient);
 
@@ -82,7 +104,6 @@ class Step:
 				inputAction.utensil = self.unassigneduten;
 				self.unassigneduten = None;
 		self.actions.append(inputAction);
-
 
 	def addTime(self,time):						# How long the step takes
 		self.time.append(time);
@@ -106,15 +127,26 @@ class Ingredient:
 	name = "";						# What's it called
 	quantity = 0;					# How much is required
 	unit = None;					# What units
-	tags = []; 						# All tags that describe the ingredient ie, Dairy, vegetarian
+	tags = []; 						# All tags that describe the ingredient ie, Dairy, vegetarian, poultry
 	substitutes = []; 				# All ingredients that could substitute for this one
-	form = "";						# What form is the ingredient ie chopped, diced
+	form = [];						# What form is the ingredient ie chopped, diced
+	descriptor = "none";			# Something that describes the ingredient
 
 	def __init__ (self, iname):
 		self.name = iname;
+		self.unit = "unit";
 
 	def __str__ (self):
 		return self.name;
+
+	def getJSON (self):
+		rv = "{";
+		rv += "\"name\": \"" + self.name + "\",";
+		rv += "\"quantity\": \"" + str(self.quantity) + "\",";
+		rv += "\"measurement\": \"" + str(self.unit) + "\",";
+		rv += "\"descriptor\": \"" + self.descriptor + "\",";
+		#rv += "\"preparation\": \"" + str(self.form) + "\"}";
+		return rv;
 
 	def isTag(tag):					# Does the ingredient have some tag
 		if tag in tags:
@@ -142,7 +174,7 @@ class Action:
 		if self.utensil == None:
 			return self.name;
 		else:
-			return self.name + " with a " + str(self.utensil);
+			return self.name + " Utensil: " + str(self.utensil);
 
 class Unit:
 	name = ""; 				# Ie cups, gallons, kilograms

@@ -1,18 +1,28 @@
 from nltk import word_tokenize
 from RecipeStructure import Recipe, Step, Action, Ingredient, Utensil, Time
+from recipes import parseRecipe
 
-allIngredients = ['cream','cheese','ham','chicken','water','butter','onion','chilies','seasoning','breast','filling','flour','paprika','wine','bouillon','juices'];
-allCookActions = ['pound','place','add','bring','reduce','cook','simmer','shred','combine','stir','turn','off','cover','heat','fold','secure','coat','mix','reduce','transfer'];
-allUtensils = ['bag','heat','pot','skillet','bowl','platter'];
-allMeasurements = ['pieces','large','medium','low','medium-low','medium-high','slice','small','pieces']
-allConditions = ['medium-low','pink','softened','translucent','low','medium','high','clear']
+from bs4 import BeautifulSoup as Soup
+import urllib2
+from pprint import pprint
+import re
+
+#allIngredients = ['cream','cheese','ham','chicken','water','butter','onion','chilies','seasoning','breast','filling','flour','paprika','wine','bouillon','juices','oil'];
+
+allCookActions = ['cool','pound','place','add','boil','reduce','cook','simmer','shred','combine','stir','turn','off','cover','heat','fold','secure','coat','mix','reduce','transfer','stir-fry','pour','bake','grease','preheat','remove','drain','sprinkle'];
+#allUtensils = ['bag','heat','pot','skillet','bowl','platter','oven'];
+allMeasurements = ['pieces','large','medium','low','medium-low','medium-high','slice','small','teaspoon','tablespoon','tsp']
+allConditions = ['medium-low','pink','softened','translucent','low','medium','high','clear','minutes','seconds','hours']
 
 class RecipeFlowchart:
 	allNodes = [];
 	currentNode = None;
 	firstNode = None;
-	myrecipe = Recipe();
+	myrecipe = None;
 	stringbuffer = "";
+	ingredients = [];
+	actions = [];
+	utensils = [];
 
 	def __str__ (self):
 		rv = ""
@@ -21,11 +31,29 @@ class RecipeFlowchart:
 		return rv;
 
 	def __init__ (self):
+		self.allNodes = [];
+		self.currentNode = None;
+		self.firstNode = None;
+		self.myrecipe = None;
+		self.stringbuffer = "";
+		self.ingredients = [];
+		self.actions = [];
+		self.utensils = [];
+
+	def setupNodes (self):
 		stringbuffer = "";
 
 		self.myrecipe = Recipe();
 		self.startNewRecipeStep("");
 		self.allNodes = [];
+
+		allIngredients = [];
+		for i in self.ingredients:
+			allIngredients.append(i.name);
+
+		allUtensils = [];
+		for u in self.utensils:
+			allUtensils.append(u.name);
 
 		firstNode = Node([""],"first node");
 		firstNode.action = "startNewRecipeStep";
@@ -236,6 +264,8 @@ class RecipeFlowchart:
 
 		for n in self.firstNode.nextNodes:
 			if n.checkNode(istring):
+				if self.stringbuffer.endswith(istring):
+   					self.stringbuffer = self.stringbuffer[:-len(istring)];
 				self.firstNode.doAction(self, self.stringbuffer);
 				self.stringbuffer = istring;
 
@@ -247,21 +277,24 @@ class RecipeFlowchart:
 		return;
 
 	def startNewRecipeStep (self, iname):
+		if self.stringbuffer != "":
+			self.addConditionToLastStep(self.stringbuffer);
+			self.stringbuffer = "";
 		self.myrecipe.addStep(Step("stepName"));
 
-	def addAction (self, iname):
+	def addActionToLastStep (self, iname):
 		myaction = Action(iname);
 		self.myrecipe.getLastStep().addAction(myaction);
 
-	def addIngredient (self, iname):
+	def addIngredientToLastStep (self, iname):
 		myingred = Ingredient(iname);
 		self.myrecipe.getLastStep().addIngredient(myingred);
 
-	def addUtensil (self, iname):
+	def addUtensilToLastStep (self, iname):
 		myuten = Utensil(iname);
 		self.myrecipe.getLastStep().addUtensil(myuten);
 
-	def addCondition (self, iname):
+	def addConditionToLastStep (self, iname):
 		mytime = Time(iname);
 		self.myrecipe.getLastStep().addTime(mytime);
 
@@ -302,25 +335,84 @@ class Node:
 			if self.action == "startNewRecipeStep":
 				recipe.startNewRecipeStep(parameter);
 			if self.action == "addAction":
-				recipe.addAction(parameter);
+				recipe.addActionToLastStep(parameter);
 			if self.action == "addIngredient":
-				recipe.addIngredient(parameter);
+				recipe.addIngredientToLastStep(parameter);
 			if self.action == "addUtensil":
-				recipe.addUtensil(parameter);
+				recipe.addUtensilToLastStep(parameter);
 			if self.action == "addCondition":
-				recipe.addCondition(parameter);
+				recipe.addConditionToLastStep(parameter);
 
-istring = "Place the chicken in a large pot and add water to cover. Bring to a boil over high heat, then reduce the heat to medium-low, cover, and simmer until the chicken pieces are no longer pink, about 10 minutes.";
-#istring = "Heat the butter in a skillet over medium heat. Stir in the onion; cook and stir until the onion has softened and turned translucent, about 5 minutes. Add the shredded chicken, chopped green chilies, taco seasoning, half of the bunch of chopped green onion, and water."
-#istring = "Pound chicken breasts if they are too thick. Place a cheese and ham slice on each breast within 1/2 inch of the edges. Fold the edges of the chicken over the filling, and secure with toothpicks. Mix the flour and paprika in a small bowl, and coat the chicken pieces. Heat the butter in a large skillet over medium-high heat, and cook the chicken until browned on all sides. Add the wine and bouillon. Reduce heat to low, cover, and simmer for 30 minutes, until chicken is no longer pink and juices run clear. Remove the toothpicks, and transfer the breasts to a warm platter. Blend the cornstarch with the cream in a small bowl, and whisk slowly into the skillet. Cook, stirring until thickened, and pour over the chicken. Serve warm."
+def parseUtensils(istring):
+	# Loop through our list of utensils and compare every word with the list returning everything that matches.
+	istring = word_tokenize(istring);
 
-istring = istring.lower();
-istring = word_tokenize(istring);
-myrfc = RecipeFlowchart();
+	f = open('utensils.csv', 'r')
+	utensilList = f.read().split('\r');
 
-for i in istring:
-	myrfc.step(i);
+	rv = [];
 
-print(myrfc.myrecipe);
+	for s in istring:
+		for u in utensilList:
+			if u.split(',')[0].lower() in s.lower():
+				newU = Utensil(u.split(',')[0].lower());
+				rv.append(newU);
+				print(u.split(',')[0].lower());
 
-#print(myrfc);
+	return rv;
+
+def parseStringRecipe (istring):
+	#istring = "Heat the butter in a skillet over medium heat. Stir in the onion; cook and stir until the onion has softened and turned translucent, about 5 minutes. Add the shredded chicken, chopped green chilies, taco seasoning, half of the bunch of chopped green onion, and water."
+	#istring = "Pound chicken breasts if they are too thick. Place a cheese and ham slice on each breast within 1/2 inch of the edges. Fold the edges of the chicken over the filling, and secure with toothpicks. Mix the flour and paprika in a small bowl, and coat the chicken pieces. Heat the butter in a large skillet over medium-high heat, and cook the chicken until browned on all sides. Add the wine and bouillon. Reduce heat to low, cover, and simmer for 30 minutes, until chicken is no longer pink and juices run clear. Remove the toothpicks, and transfer the breasts to a warm platter. Blend the cornstarch with the cream in a small bowl, and whisk slowly into the skillet. Cook, stirring until thickened, and pour over the chicken. Serve warm."
+	#istring = "In a small bowl, combine the soy sauce, rice wine, brown sugar and cornstarch. Set aside. Heat oil in a wok or skillet over medium high heat. Stir-fry ginger and garlic for 30 seconds. Add the steak and stir-fry for 2 minutes or until evenly browned. Add the snow peas and stir-fry for an additional 3 minutes. Add the soy sauce mixture, bring to a boil, stirring constantly. Lower heat and simmer until the sauce is thick and smooth. Serve immediately.";
+
+	html = urllib2.urlopen(istring).read();
+
+	soup = Soup(html)
+
+	recipeText = soup.find(itemprop='recipeInstructions').get_text();
+	print(recipeText);
+
+
+	recipe = parseRecipe(istring);
+
+	ingredients = [];
+	for i in recipe:
+		ingredName = i['ingredient'];
+		if ',' in ingredName:
+			ingredName = word_tokenize(ingredName.split(',')[0]);
+			ingredName = ingredName[len(ingredName) - 1];
+
+		ingred = Ingredient(ingredName);
+		ingred.form.append(i['form']);
+		ingred.quantity = i['quantity'];
+		ingred.measurement = i['measurement'];
+		ingredients.append(ingred);
+
+
+	recipeText = recipeText.lower();
+	recipeText = re.sub('[.]','',recipeText);
+	myrfc = RecipeFlowchart();
+
+	for i in ingredients:
+		myrfc.ingredients.append(i);
+
+	utensils = parseUtensils(recipeText);
+
+	for u in utensils:
+		myrfc.utensils.append(u);
+
+	myrfc.setupNodes();
+
+	recipeText = word_tokenize(recipeText);
+
+	for i in recipeText:
+		myrfc.step(i);
+
+	print(myrfc.myrecipe);
+
+	print(myrfc);
+
+#istring = "Place the chicken in a large pot and add water to cover. Bring to a boil over high heat, then reduce the heat to medium-low, cover, and simmer until the chicken pieces are no longer pink, about 10 minutes.";
+istring = 'http://allrecipes.com/Recipe/Slow-Cooker-Fish-Chowder/Detail.aspx?prop24=RD_RelatedRecipes';
+parseStringRecipe(istring);
