@@ -1,3 +1,5 @@
+import json
+
 class Recipe:
 	firstStep = None;			# The first step in our recipe. A Step object
 
@@ -61,20 +63,20 @@ class Step:
 	def __str__ (self):
 		rv = "\nStep " + str(self.StepNumber) + "\n";
 		if len(self.ingredients) > 0:
-			rv += "Ingredients: \n";
+			rv += "\tIngredients: \n";
 		for i in self.ingredients:
-			rv += "\t" + str(i) + "\n";
+			rv += "\t\t" + str(i) + "\n";
 		if len(self.actions) > 0:
-			rv += "Actions: \n"
+			rv += "\tActions: \n"
 		for a in self.actions:
-			rv += "\t" + str(a) + "\n";
+			rv += "\t\t" + str(a) + "\n";
 		if not self.unassigneduten == None:
-			rv += "Utensil: \n"
-			rv += "\t" + str(self.unassigneduten) + "\n";
+			rv += "\tUtensil: \n"
+			rv += "\t\t" + str(self.unassigneduten) + "\n";
 		if len(self.time) > 0:
-			rv += "Time: \n";
+			rv += "\tTime: \n";
 		for t in self.time:
-			rv += "\t" + str(t) + "\n";
+			rv += "\t\t" + str(t) + "\n";
 		return rv + "\n";
 
 	def getJSON (self):
@@ -90,7 +92,7 @@ class Step:
 		for a in self.actions:
 			if a.utensil != None:
 				rv += "\"" +  a.utensil.name + "\"";
-		rv += "],}";
+		rv += "]}";
 		return rv;
 
 
@@ -144,8 +146,9 @@ class Ingredient:
 		rv += "\"name\": \"" + self.name + "\",";
 		rv += "\"quantity\": \"" + str(self.quantity) + "\",";
 		rv += "\"measurement\": \"" + str(self.unit) + "\",";
-		rv += "\"descriptor\": \"" + self.descriptor + "\",";
+		rv += "\"descriptor\": \"" + str(self.form[0]) + "\",";
 		#rv += "\"preparation\": \"" + str(self.form) + "\"}";
+		rv += "}";
 		return rv;
 
 	def isTag(tag):					# Does the ingredient have some tag

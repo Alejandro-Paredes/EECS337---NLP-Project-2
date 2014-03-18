@@ -6,10 +6,11 @@ from bs4 import BeautifulSoup as Soup
 import urllib2
 from pprint import pprint
 import re
+import json
 
 #allIngredients = ['cream','cheese','ham','chicken','water','butter','onion','chilies','seasoning','breast','filling','flour','paprika','wine','bouillon','juices','oil'];
 
-allCookActions = ['cool','pound','place','add','boil','reduce','cook','simmer','shred','combine','stir','turn','off','cover','heat','fold','secure','coat','mix','reduce','transfer','stir-fry','pour','bake','grease','preheat','remove','drain','sprinkle'];
+allCookActions = ['cool','pound','place','add','boil','reduce','cook','simmer','shred','combine','stir','turn','cover','heat','fold','secure','coat','mix','reduce','transfer','stir-fry','pour','bake','grease','preheat','remove','drain','sprinkle','absorb','arrange','stuff','dissolve','brush'];
 #allUtensils = ['bag','heat','pot','skillet','bowl','platter','oven'];
 allMeasurements = ['pieces','large','medium','low','medium-low','medium-high','slice','small','teaspoon','tablespoon','tsp']
 allConditions = ['medium-low','pink','softened','translucent','low','medium','high','clear','minutes','seconds','hours']
@@ -58,9 +59,18 @@ class RecipeFlowchart:
 		firstNode = Node([""],"first node");
 		firstNode.action = "startNewRecipeStep";
 
+		# In Node
+		inNode = Node(['in'], "in node");
+
+		# First utensil node
+		firstUtensil = Node(allUtensils, "first utensil");
+		firstUtensil.action = "addUtensil";
+		inNode.addNode(firstUtensil);
+
 		# Cook Node
 		cookAction = Node(allCookActions,"cook action");
 		cookAction.action = "addAction";
+		firstUtensil.addNode(cookAction);
 
 		# Addition Node
 		additionWordsAction = Node(['onto','with','together','each'], "addition node");
@@ -225,9 +235,12 @@ class RecipeFlowchart:
 
 
 		firstNode.addNode(cookAction);
+		firstNode.addNode(inNode);
 		self.firstNode = firstNode;
 		self.currentNode = self.firstNode;
 
+		self.allNodes.append(inNode);
+		self.allNodes.append(firstUtensil);
 		self.allNodes.append(cookAction);
 		self.allNodes.append(additionWordsAction);
 		self.allNodes.append(ingredients1Action);
@@ -255,7 +268,10 @@ class RecipeFlowchart:
 		# Only advance if the string is accepted as the next node or indicates the start of a new step
 		for n in self.currentNode.nextNodes:
 			if n.checkNode(istring):
-				n.doAction(self, self.stringbuffer);
+				if "ingredient" in n.name:
+					n.doAction(self, istring);
+				else:
+					n.doAction(self, self.stringbuffer);
 				self.currentNode = n;
 				if not "measure" in n.name:
 					self.stringbuffer = "";
@@ -287,8 +303,10 @@ class RecipeFlowchart:
 		self.myrecipe.getLastStep().addAction(myaction);
 
 	def addIngredientToLastStep (self, iname):
-		myingred = Ingredient(iname);
-		self.myrecipe.getLastStep().addIngredient(myingred);
+		for i in self.ingredients:
+			if iname in i.name:
+				self.myrecipe.getLastStep().addIngredient(i);
+				return;
 
 	def addUtensilToLastStep (self, iname):
 		myuten = Utensil(iname);
@@ -361,6 +379,38 @@ def parseUtensils(istring):
 
 	return rv;
 
+def expandMeasure(istring):
+
+	if not istring:
+		return "none";
+
+	allMeasures = ["fluid ounce", "teaspoon","tablespoon","ounce","pound","gallon","inch","pint","quart","dozen"];
+
+	if "istring" in allMeasures:
+		return istring;
+	else:
+		if "fl" in istring and "oz" in istring:
+			return "fluid ounce";
+		if "tsp" in istring:
+			return "teaspoon";
+		if "tbsp" in istring or "tbs" in istring:
+			return "tablespoon";
+		if "oz" in istring:
+			return "ounce";
+		if "lb" in istring:
+			return "pound";
+		if "gal" in istring:
+			return "gallon";
+		if "in" in istring:
+			return "inch";
+		if "pt" in istring:
+			return "pint";
+		if "qt" in istring:
+			return "quart";
+		if "doz" in istring:
+			return "dozen"
+		return istring;
+
 def parseStringRecipe (istring):
 	#istring = "Heat the butter in a skillet over medium heat. Stir in the onion; cook and stir until the onion has softened and turned translucent, about 5 minutes. Add the shredded chicken, chopped green chilies, taco seasoning, half of the bunch of chopped green onion, and water."
 	#istring = "Pound chicken breasts if they are too thick. Place a cheese and ham slice on each breast within 1/2 inch of the edges. Fold the edges of the chicken over the filling, and secure with toothpicks. Mix the flour and paprika in a small bowl, and coat the chicken pieces. Heat the butter in a large skillet over medium-high heat, and cook the chicken until browned on all sides. Add the wine and bouillon. Reduce heat to low, cover, and simmer for 30 minutes, until chicken is no longer pink and juices run clear. Remove the toothpicks, and transfer the breasts to a warm platter. Blend the cornstarch with the cream in a small bowl, and whisk slowly into the skillet. Cook, stirring until thickened, and pour over the chicken. Serve warm."
@@ -382,11 +432,15 @@ def parseStringRecipe (istring):
 		if ',' in ingredName:
 			ingredName = word_tokenize(ingredName.split(',')[0]);
 			ingredName = ingredName[len(ingredName) - 1];
+		ingredName = word_tokenize(ingredName)[len(word_tokenize(ingredName)) - 1];
 
 		ingred = Ingredient(ingredName);
 		ingred.form.append(i['form']);
-		ingred.quantity = i['quantity'];
-		ingred.measurement = i['measurement'];
+		if i['quantity']:
+			ingred.quantity = i['quantity'];
+		else:
+			ingred.quantity = 1;
+		ingred.unit = i['measurement'];
 		ingredients.append(ingred);
 
 
@@ -410,9 +464,24 @@ def parseStringRecipe (istring):
 		myrfc.step(i);
 
 	print(myrfc.myrecipe);
+	utensilNames = []
+	for u in utensils:
+		utensilNames.append(u.name);
+	utensilNames= list(set(utensilNames));
 
-	print(myrfc);
+	prettyIngredients = []
+	for i in ingredients:
+		prettyIngredients.append({"name":i.name, "quantity":float(str(i.quantity)), "measurement":expandMeasure(i.unit), "descriptor":str(i.form[0]).lower(), "preparation":i.descriptor})
+
+	rv = json.dumps({"ingredients":prettyIngredients, "cooking tools":utensilNames, "cooking method":"bake"});
+	rv = rv.lower();
+	print(rv);
+
+	#print(myrfc);
 
 #istring = "Place the chicken in a large pot and add water to cover. Bring to a boil over high heat, then reduce the heat to medium-low, cover, and simmer until the chicken pieces are no longer pink, about 10 minutes.";
-istring = 'http://allrecipes.com/Recipe/Slow-Cooker-Fish-Chowder/Detail.aspx?prop24=RD_RelatedRecipes';
-parseStringRecipe(istring);
+
+recipeURL = raw_input("Enter a recipe URL: ")
+
+istring = 'http://allrecipes.com/Recipe/Moroccan-Style-Stuffed-Acorn-Squash/Detail.aspx?prop24=RD_RelatedRecipes';
+parseStringRecipe(recipeURL);
