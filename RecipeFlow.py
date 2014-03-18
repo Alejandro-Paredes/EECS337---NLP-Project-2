@@ -14,7 +14,7 @@ import re
 import json
 
 # Our list of cook actions
-allCookActions = ['cool','pound','place','add','boil','reduce','cook','simmer','shred','combine','stir','turn','cover','heat','fold','secure','coat','mix','reduce','transfer','stir-fry','pour','bake','grease','preheat','remove','drain','sprinkle','absorb','arrange','stuff','dissolve','brush','prick','rub','wrap'];
+allCookActions = ['rotisserie','flashbak','blanch','brais','coddl','infus','poach','simmer','smother','steam','steep','stew','saut','smoke','fry','broil','grill','barbecu','roast','cool','pound','place','add','boil','reduce','cook','simmer','shred','combine','stir','turn','cover','heat','fold','secure','coat','mix','reduce','transfer','stir-fry','pour','bake','grease','preheat','remove','drain','sprinkle','absorb','arrange','stuff','dissolve','brush','prick','rub','wrap','bring','cut','rinse'];
 allMeasurements = ['pieces','large','medium','low','medium-low','medium-high','slice','small','teaspoon','tablespoon','tsp']
 allConditions = [];
 
@@ -438,8 +438,11 @@ def parseStringRecipe (istring):
 		else:
 			ingred.quantity = 1;
 		ingred.unit = i['measurement'];
-		print(i['measurement']);
 		ingredients.append(ingred);
+
+		for l in cathysfile:
+			if l == ingred.name:
+				ingred.substitutes.add(l.split(',')[1]);
 
 	# Convert to lowercase and remove periods
 	recipeText = recipeText.lower();
