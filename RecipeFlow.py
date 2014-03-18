@@ -1,3 +1,8 @@
+#
+# RecipeFlow.py
+# Given a url from allrecipes.com, convert the recipe to a RecipeStructure object
+#
+
 from nltk import word_tokenize
 from RecipeStructure import Recipe, Step, Action, Ingredient, Utensil, Time
 from recipes import parseRecipe
@@ -8,22 +13,23 @@ from pprint import pprint
 import re
 import json
 
-#allIngredients = ['cream','cheese','ham','chicken','water','butter','onion','chilies','seasoning','breast','filling','flour','paprika','wine','bouillon','juices','oil'];
-
-allCookActions = ['cool','pound','place','add','boil','reduce','cook','simmer','shred','combine','stir','turn','cover','heat','fold','secure','coat','mix','reduce','transfer','stir-fry','pour','bake','grease','preheat','remove','drain','sprinkle','absorb','arrange','stuff','dissolve','brush'];
-#allUtensils = ['bag','heat','pot','skillet','bowl','platter','oven'];
+# Our list of cook actions
+allCookActions = ['cool','pound','place','add','boil','reduce','cook','simmer','shred','combine','stir','turn','cover','heat','fold','secure','coat','mix','reduce','transfer','stir-fry','pour','bake','grease','preheat','remove','drain','sprinkle','absorb','arrange','stuff','dissolve','brush','prick','rub','wrap'];
 allMeasurements = ['pieces','large','medium','low','medium-low','medium-high','slice','small','teaspoon','tablespoon','tsp']
-allConditions = ['medium-low','pink','softened','translucent','low','medium','high','clear','minutes','seconds','hours']
+allConditions = [];
 
+# RecipeFlowchart is the most important function. It creates a flowchart by which we can represent recipes.
+# After initializing it, pass in the next word in the recipe. RecipeFlowchart will decide if this word
+# Belongs on the current step, or creates a new step and will also determine what type of word it is, ingredient, utensil, or action
 class RecipeFlowchart:
-	allNodes = [];
-	currentNode = None;
+	allNodes = [];			# List all the nodes so we can print them
+	currentNode = None;		# Where are we in the flowchart
 	firstNode = None;
-	myrecipe = None;
-	stringbuffer = "";
-	ingredients = [];
-	actions = [];
-	utensils = [];
+	myrecipe = None;		# The recipe object our flowchart is trying to build
+	stringbuffer = "";		# Stores unrecognized strings for later
+	ingredients = [];		# A list of ingredient objects we will search for
+	actions = [];			# same for actions
+	utensils = [];			# and utilities
 
 	def __str__ (self):
 		rv = ""
@@ -41,11 +47,15 @@ class RecipeFlowchart:
 		self.actions = [];
 		self.utensils = [];
 
+	# Once we have our ingredient, utensil, and action lists, we can create the flowchart
 	def setupNodes (self):
 		stringbuffer = "";
 
+		# Create a new recipe object and set its starting values equal to what we know
 		self.myrecipe = Recipe();
-		self.startNewRecipeStep("");
+		self.myrecipe.allIngredients = self.ingredients;
+		self.myrecipe.allUtensils = self.utensils;
+		self.startNewRecipeStep("");						# Create a new step
 		self.allNodes = [];
 
 		allIngredients = [];
@@ -56,6 +66,11 @@ class RecipeFlowchart:
 		for u in self.utensils:
 			allUtensils.append(u.name);
 
+		# Our flow chart is composed of nodes. Each node has strings that will match it.
+		# Each node also has a name, and an action to be performed if triggered
+		# Each node has an input node, except the first, and any number of output nodes
+
+		# Start node, the first thing that will be evaluated
 		firstNode = Node([""],"first node");
 		firstNode.action = "startNewRecipeStep";
 
@@ -239,6 +254,7 @@ class RecipeFlowchart:
 		self.firstNode = firstNode;
 		self.currentNode = self.firstNode;
 
+		# Register all the nodes we created so we can print them
 		self.allNodes.append(inNode);
 		self.allNodes.append(firstUtensil);
 		self.allNodes.append(cookAction);
@@ -261,6 +277,7 @@ class RecipeFlowchart:
 		self.allNodes.append(andNode);
 		self.allNodes.append(andNode2);
 
+	# Call step sequentially on every word in the recipe. It will add the word to the flowchart and decide what to do next
 	def step (self, istring):
 		#print("\t" + self.currentNode.name + "  " + istring);
 		self.stringbuffer = self.stringbuffer + " " + istring;
@@ -278,6 +295,7 @@ class RecipeFlowchart:
 				#print(istring + " " + n.name);
 				return;
 
+		# If the string was not accepted, see if this is a new step
 		for n in self.firstNode.nextNodes:
 			if n.checkNode(istring):
 				if self.stringbuffer.endswith(istring):
@@ -292,6 +310,12 @@ class RecipeFlowchart:
 				return;
 		return;
 
+	def addIngredient (self, iingred):
+		self.ingredients.append(iingred);
+
+	def addUtensil (self, iuten):
+		self.utensils.append(iuten);
+
 	def startNewRecipeStep (self, iname):
 		if self.stringbuffer != "":
 			self.addConditionToLastStep(self.stringbuffer);
@@ -301,6 +325,7 @@ class RecipeFlowchart:
 	def addActionToLastStep (self, iname):
 		myaction = Action(iname);
 		self.myrecipe.getLastStep().addAction(myaction);
+		self.myrecipe.allActions.append(iname);
 
 	def addIngredientToLastStep (self, iname):
 		for i in self.ingredients:
@@ -316,12 +341,13 @@ class RecipeFlowchart:
 		mytime = Time(iname);
 		self.myrecipe.getLastStep().addTime(mytime);
 
+# The flowchart is made up of nodes
 class Node:
-	name = '';
-	isTrueNode = False;
-	values = '';
-	nextNodes = [];
-	action = "";
+	name = '';					# Name of the node. Should contain utensil, ingredient, or measurement if it is one of those
+	isTrueNode = False;			# Special node that always returns true. Used to organize
+	values = '';				# Anything the node can be equal to
+	nextNodes = [];				# Any other node this node points to
+	action = "";				# What to do when triggered
 
 	def __init__ (self, ival, iname):
 		self.name = iname;
@@ -339,6 +365,7 @@ class Node:
 			rv += "\t" + n.name + "\n";
 		return rv;
 
+	# Give this node a string and see if it matches
 	def checkNode(self, ival):
 		for v in self.values:
 			if v == ival:
@@ -348,6 +375,7 @@ class Node:
 	def addNode (self, node):
 		self.nextNodes.append(node);
 
+	# Do the action
 	def doAction (self, recipe, parameter):
 		if not self.action == None:
 			if self.action == "startNewRecipeStep":
@@ -361,6 +389,7 @@ class Node:
 			if self.action == "addCondition":
 				recipe.addConditionToLastStep(parameter);
 
+# Given a string, a recipe, find all the utensils and return them as a list
 def parseUtensils(istring):
 	# Loop through our list of utensils and compare every word with the list returning everything that matches.
 	istring = word_tokenize(istring);
@@ -375,55 +404,23 @@ def parseUtensils(istring):
 			if u.split(',')[0].lower() in s.lower():
 				newU = Utensil(u.split(',')[0].lower());
 				rv.append(newU);
-				print(u.split(',')[0].lower());
 
 	return rv;
 
-def expandMeasure(istring):
-
-	if not istring:
-		return "none";
-
-	allMeasures = ["fluid ounce", "teaspoon","tablespoon","ounce","pound","gallon","inch","pint","quart","dozen"];
-
-	if "istring" in allMeasures:
-		return istring;
-	else:
-		if "fl" in istring and "oz" in istring:
-			return "fluid ounce";
-		if "tsp" in istring:
-			return "teaspoon";
-		if "tbsp" in istring or "tbs" in istring:
-			return "tablespoon";
-		if "oz" in istring:
-			return "ounce";
-		if "lb" in istring:
-			return "pound";
-		if "gal" in istring:
-			return "gallon";
-		if "in" in istring:
-			return "inch";
-		if "pt" in istring:
-			return "pint";
-		if "qt" in istring:
-			return "quart";
-		if "doz" in istring:
-			return "dozen"
-		return istring;
-
+# Given a recipe, convert it to a Recipe object
 def parseStringRecipe (istring):
-	#istring = "Heat the butter in a skillet over medium heat. Stir in the onion; cook and stir until the onion has softened and turned translucent, about 5 minutes. Add the shredded chicken, chopped green chilies, taco seasoning, half of the bunch of chopped green onion, and water."
-	#istring = "Pound chicken breasts if they are too thick. Place a cheese and ham slice on each breast within 1/2 inch of the edges. Fold the edges of the chicken over the filling, and secure with toothpicks. Mix the flour and paprika in a small bowl, and coat the chicken pieces. Heat the butter in a large skillet over medium-high heat, and cook the chicken until browned on all sides. Add the wine and bouillon. Reduce heat to low, cover, and simmer for 30 minutes, until chicken is no longer pink and juices run clear. Remove the toothpicks, and transfer the breasts to a warm platter. Blend the cornstarch with the cream in a small bowl, and whisk slowly into the skillet. Cook, stirring until thickened, and pour over the chicken. Serve warm."
-	#istring = "In a small bowl, combine the soy sauce, rice wine, brown sugar and cornstarch. Set aside. Heat oil in a wok or skillet over medium high heat. Stir-fry ginger and garlic for 30 seconds. Add the steak and stir-fry for 2 minutes or until evenly browned. Add the snow peas and stir-fry for an additional 3 minutes. Add the soy sauce mixture, bring to a boil, stirring constantly. Lower heat and simmer until the sauce is thick and smooth. Serve immediately.";
-
+	
+	# Download the recipe and extract the directions
 	html = urllib2.urlopen(istring).read();
 
 	soup = Soup(html)
 
 	recipeText = soup.find(itemprop='recipeInstructions').get_text();
-	print(recipeText);
+	
+	print(recipeText);			# Print Directions
 
 
+	# Extract Ingredients
 	recipe = parseRecipe(istring);
 
 	ingredients = [];
@@ -441,47 +438,39 @@ def parseStringRecipe (istring):
 		else:
 			ingred.quantity = 1;
 		ingred.unit = i['measurement'];
+		print(i['measurement']);
 		ingredients.append(ingred);
 
-
+	# Convert to lowercase and remove periods
 	recipeText = recipeText.lower();
 	recipeText = re.sub('[.]','',recipeText);
+
+	# Create a new flow chart object and add all ingredients to
 	myrfc = RecipeFlowchart();
 
 	for i in ingredients:
-		myrfc.ingredients.append(i);
+		myrfc.addIngredient(i);
 
+	# Extract the utensils and pass them to the flowchart
 	utensils = parseUtensils(recipeText);
 
 	for u in utensils:
 		myrfc.utensils.append(u);
 
+	# Now that the flow chart has its data, initialize it
 	myrfc.setupNodes();
 
+	# Convert the recipe to a list of words
 	recipeText = word_tokenize(recipeText);
 
+	# Pass each word into the flowchart
 	for i in recipeText:
 		myrfc.step(i);
 
+	# Print the result
 	print(myrfc.myrecipe);
-	utensilNames = []
-	for u in utensils:
-		utensilNames.append(u.name);
-	utensilNames= list(set(utensilNames));
+	print(myrfc.myrecipe.getJSON());
 
-	prettyIngredients = []
-	for i in ingredients:
-		prettyIngredients.append({"name":i.name, "quantity":float(str(i.quantity)), "measurement":expandMeasure(i.unit), "descriptor":str(i.form[0]).lower(), "preparation":i.descriptor})
-
-	rv = json.dumps({"ingredients":prettyIngredients, "cooking tools":utensilNames, "cooking method":"bake"});
-	rv = rv.lower();
-	print(rv);
-
-	#print(myrfc);
-
-#istring = "Place the chicken in a large pot and add water to cover. Bring to a boil over high heat, then reduce the heat to medium-low, cover, and simmer until the chicken pieces are no longer pink, about 10 minutes.";
 
 recipeURL = raw_input("Enter a recipe URL: ")
-
-istring = 'http://allrecipes.com/Recipe/Moroccan-Style-Stuffed-Acorn-Squash/Detail.aspx?prop24=RD_RelatedRecipes';
 parseStringRecipe(recipeURL);

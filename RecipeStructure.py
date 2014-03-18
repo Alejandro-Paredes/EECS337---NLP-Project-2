@@ -1,7 +1,17 @@
+#
+# RecipeStructure.py
+# All recipes and their components are stored in this format
+#
+
 import json
 
+
+# The highest data type, a recipe. It contains a linked list of steps
 class Recipe:
-	firstStep = None;			# The first step in our recipe. A Step object
+	firstStep = None;			# The first step in our recipe. A Step object pointing to the next step
+	allIngredients = [];		# A set of all the ingredients our recipe uses
+	allUtensils = [];			# Same for utensils
+	allActions = [];			# and actions
 
 	def __init__(self):		# Constructor
 		self.firstStep = None;
@@ -12,18 +22,27 @@ class Recipe:
 		while currentStep != None:
 			rv += str(currentStep);
 			currentStep = currentStep.nextStep;
-		rv += self.getJSON();
+		#rv += self.getJSON();
 		return rv;
 
+	# Convert the recipe to json, ignoring steps. Only uses the lists of all ingredients, utensils, and actions
 	def getJSON (self):
-		rv = "{\"steps\": [";
-		lastStep = self.firstStep;
-		while not lastStep.nextStep == None:
-			rv += lastStep.getJSON() + ",";
-			lastStep = lastStep.nextStep;
-		rv += "]}";
+		utensilNames = []
+
+		for u in self.allUtensils:
+			utensilNames.append(u.name);
+		utensilNames= list(set(utensilNames));
+
+		prettyIngredients = []
+		for i in self.allIngredients:
+			prettyIngredients.append({"name":i.name, "quantity":float(str(i.quantity)), "measurement":self.expandMeasure(i.unit), "descriptor":str(i.form[0]).lower(), "preparation":i.descriptor})
+
+		rv = json.dumps({"ingredients":prettyIngredients, "cooking tools":utensilNames, "cooking method":self.allActions});
+		rv = rv.lower();
+
 		return rv;
 
+	# Add a new step to the recipe
 	def addStep(self, inputStep):			# Build the recipes by adding steps to the end
 		if self.firstStep == None:
 			self.firstStep = inputStep;
@@ -34,12 +53,47 @@ class Recipe:
 			inputStep.StepNumber = lastStep.StepNumber + 1;
 			lastStep.nextStep = inputStep;
 
+	# Traverse the linked list and get the final step
 	def getLastStep (self):
 		lastStep = self.firstStep;
 		while not lastStep.nextStep == None:
 			lastStep = lastStep.nextStep;
 		return lastStep;
 
+	# Given a measurement that has been abbreviated, ie tsp, expand it to ie tablespoon
+	def expandMeasure(self,istring):
+
+		if not istring:
+			return "none";
+
+		allMeasures = ["fluid ounce", "teaspoon","tablespoon","ounce","pound","gallon","inch","pint","quart","dozen"];
+
+		if "istring" in allMeasures:
+			return istring;
+		else:
+			if "fl" in istring and "oz" in istring:
+				return "fluid ounce";
+			if "tsp" in istring:
+				return "teaspoon";
+			if "tbsp" in istring or "tbs" in istring:
+				return "tablespoon";
+			if "oz" in istring:
+				return "ounce";
+			if "lb" in istring:
+				return "pound";
+			if "gal" in istring:
+				return "gallon";
+			if "in" in istring:
+				return "inch";
+			if "pt" in istring:
+				return "pint";
+			if "qt" in istring:
+				return "quart";
+			if "doz" in istring:
+				return "dozen"
+			return istring;
+
+# Recipes are made up of steps. Steps have actions, ingredients, and utensils.
 class Step:
 	name = "";
 	previousStep = None;		# The step immediately preceding
@@ -78,24 +132,6 @@ class Step:
 		for t in self.time:
 			rv += "\t\t" + str(t) + "\n";
 		return rv + "\n";
-
-	def getJSON (self):
-		rv = "{\"ingredients\": [";
-		for i in self.ingredients:
-			rv += i.getJSON() + ",";
-		rv += "],";
-		rv += "\"cooking method\": [";
-		for a in self.actions:
-			rv += "\"" + a.name + "\",";
-		rv += "],";
-		rv += "\"cooking tools\": [";
-		for a in self.actions:
-			if a.utensil != None:
-				rv += "\"" +  a.utensil.name + "\"";
-		rv += "]}";
-		return rv;
-
-
 
 	def addIngredient(self, inputIngredient):		# Add an ingredient
 		self.ingredients.append(inputIngredient);
@@ -140,16 +176,6 @@ class Ingredient:
 
 	def __str__ (self):
 		return self.name;
-
-	def getJSON (self):
-		rv = "{";
-		rv += "\"name\": \"" + self.name + "\",";
-		rv += "\"quantity\": \"" + str(self.quantity) + "\",";
-		rv += "\"measurement\": \"" + str(self.unit) + "\",";
-		rv += "\"descriptor\": \"" + str(self.form[0]) + "\",";
-		#rv += "\"preparation\": \"" + str(self.form) + "\"}";
-		rv += "}";
-		return rv;
 
 	def isTag(tag):					# Does the ingredient have some tag
 		if tag in tags:
