@@ -14,7 +14,7 @@ def parseIngredient(html):
   amount_span = html.find('span', class_='ingredient-amount')
   amount = amount_span.string if amount_span else None
   if amount:
-    match = re.search('(\d.*\d*)\s(\w+)', amount)
+    match = re.search('((\d.?\d*)*)\s(\w+)', amount)
     quantity = match.group(1) if match else amount
     measurement = match.group(2) if match else None
 
