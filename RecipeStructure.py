@@ -47,7 +47,16 @@ class Recipe:
 		for i in self.allIngredients:
 			prettyIngredients.append({"name":i.name, "quantity":float(str(i.quantity)), "measurement":self.expandMeasure(i.unit), "descriptor":str(i.form[0]).lower(), "preparation":i.descriptor})
 
-		rv = json.dumps({"ingredients":prettyIngredients, "cooking tools":utensilNames, "cooking method":self.allActions});
+		mainAction = "cook";
+
+		f = open('mainMethod.txt', 'r')
+		
+		mainActionList = f.read().split('\n');
+		for a in self.allActions:
+			if a in mainActionList:
+				mainAction = a;
+
+		rv = json.dumps({"ingredients":prettyIngredients, "cooking tools":utensilNames, "cooking method":mainAction});
 		rv = rv.lower();
 
 		return rv;
