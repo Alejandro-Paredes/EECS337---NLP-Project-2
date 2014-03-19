@@ -18,6 +18,16 @@ class Recipe:
 
 	def __str__ (self):
 		rv = "";
+		rv += "Ingredients: \n";
+		for i in self.allIngredients:
+			rv += "\t" + str(i) + "\n";
+		rv += "Utensils:\n";
+		us = [];
+		for u in self.allUtensils:
+			us.append(str(u));
+		us = list(set(us));
+		for u in us:
+			rv += "\t" + str(u) + "\n";
 		currentStep = self.firstStep;
 		while currentStep != None:
 			rv += str(currentStep);
@@ -175,7 +185,7 @@ class Ingredient:
 		self.unit = "unit";
 
 	def __str__ (self):
-		return self.name;
+		return self.name + " (" + str(self.form[0]) + ", " + self.descriptor + ")" + ": " + str(self.quantity) + " " + str(self.unit);
 
 	def isTag(tag):					# Does the ingredient have some tag
 		if tag in tags:
@@ -218,7 +228,10 @@ class Utensil:
 		self.name = iname;
 
 	def __str__ (self):
-		return self.name;
+		if self.name == 'heat':
+			return 'stove';
+		else:
+			return self.name;
 
 class Time:						# TODO
 	name = "";

@@ -402,7 +402,8 @@ def parseUtensils(istring):
 	for s in istring:
 		for u in utensilList:
 			if u.split(',')[0].lower() in s.lower():
-				newU = Utensil(u.split(',')[0].lower());
+				uname = u.split(',')[0].lower();
+				newU = Utensil(uname);
 				rv.append(newU);
 
 	return rv;
@@ -440,9 +441,9 @@ def parseStringRecipe (istring):
 		ingred.unit = i['measurement'];
 		ingredients.append(ingred);
 
-		for l in cathysfile:
-			if l == ingred.name:
-				ingred.substitutes.add(l.split(',')[1]);
+		#for l in cathysfile:
+		#	if l == ingred.name:
+		#		ingred.substitutes.add(l.split(',')[1]);
 
 	# Convert to lowercase and remove periods
 	recipeText = recipeText.lower();
