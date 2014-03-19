@@ -1,0 +1,17 @@
+cook
+simmer
+heat
+roast
+barbe
+grill
+broil
+sear
+bak
+fry
+boil
+poach
+steam
+fry
+saut
+smoke
+bake
