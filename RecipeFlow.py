@@ -424,13 +424,33 @@ def parseStringRecipe (istring):
 	# Extract Ingredients
 	recipe = parseRecipe(istring);
 
+	# Read in substitutes
+	substitutes = {'vegan':{},'vegetarian':{},'lactose':{}};
+
+	f = open('lactose.csv', 'r')
+	lactoseList = f.read().split('\n');
+	for l in lactoseList:
+		substitutes['lactose'][l.split(',')[0].lower()] = l.split(',')[1].lower();
+		substitutes['vegan'][l.split(',')[0].lower()] = l.split(',')[1].lower();
+
+	f = open('VegetarianSubstitutions.csv', 'r')
+	vegList = f.read().split('\n');
+	for l in vegList:
+		substitutes['vegetarian'][l.split(',')[0].lower()] = l.split(',')[1].lower();
+		substitutes['vegan'][l.split(',')[0].lower()] = l.split(',')[1].lower();
+
 	ingredients = [];
+
 	for i in recipe:
 		ingredName = i['ingredient'];
 		if ',' in ingredName:
 			ingredName = word_tokenize(ingredName.split(',')[0]);
 			ingredName = ingredName[len(ingredName) - 1];
-		ingredName = word_tokenize(ingredName)[len(word_tokenize(ingredName)) - 1];
+		iwords = word_tokenize(ingredName);
+		if len(iwords) > 0:
+			ingredName = iwords[len(iwords) - 1];
+		else:
+			ingredName = "undetermined";
 
 		ingred = Ingredient(ingredName);
 		ingred.form.append(i['form']);
@@ -439,6 +459,7 @@ def parseStringRecipe (istring):
 		else:
 			ingred.quantity = 1;
 		ingred.unit = i['measurement'];
+		ingred.substitutes = substitutes;
 		ingredients.append(ingred);
 
 		#for l in cathysfile:
@@ -475,6 +496,20 @@ def parseStringRecipe (istring):
 	print(myrfc.myrecipe);
 	print(myrfc.myrecipe.getJSON());
 
+	# Ask for a transformation
+	transformChoice = raw_input("Transform Recipe to (V)egetarian, (L)actose, or ve(G)an (v, l, g): ");
+
+	if transformChoice == 'v' or transformChoice == 'V':
+		myrfc.myrecipe.transform('vegetarian');
+		print(myrfc.myrecipe);
+
+	if transformChoice == 'l' or transformChoice == 'L':
+		myrfc.myrecipe.transform('lactose');
+		print(myrfc.myrecipe);
+
+	if transformChoice == 'g' or transformChoice == 'G':
+		myrfc.myrecipe.transform('vegan');
+		print(myrfc.myrecipe);
 
 recipeURL = raw_input("Enter a recipe URL: ")
 parseStringRecipe(recipeURL);

@@ -70,6 +70,17 @@ class Recipe:
 			lastStep = lastStep.nextStep;
 		return lastStep;
 
+	def transform (self, target):
+		for i in self.allIngredients:
+			i.transform(target)
+
+		lastStep = self.firstStep;
+		while not lastStep.nextStep == None:
+			for i in lastStep.ingredients:
+				i.transform(target);
+			lastStep = lastStep.nextStep;
+
+
 	# Given a measurement that has been abbreviated, ie tsp, expand it to ie tablespoon
 	def expandMeasure(self,istring):
 
@@ -192,6 +203,13 @@ class Ingredient:
 			return true;
 		else:
 			return false;
+
+	def transform (self, target):
+		try:
+			self.name = self.substitutes[target][self.name];
+			return;
+		except KeyError:
+			return;
 
 	def getTagSubstitute(tag):			# Find a substitute ingredient that conforms to this tag
 		if self.isTag(tag):
