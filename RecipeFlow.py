@@ -408,6 +408,87 @@ def parseUtensils(istring):
 
 	return rv;
 
+# Given a recipe URL return a JSON formatted output
+def jsonRecipeOutput (istring):
+    # Download the recipe and extract the directions
+	html = urllib2.urlopen(istring).read();
+    
+	soup = Soup(html)
+    
+	recipeText = soup.find(itemprop='recipeInstructions').get_text();
+    
+	# Extract Ingredients
+	recipe = parseRecipe(istring);
+    
+	# Read in substitutes
+	substitutes = {'vegan':{},'vegetarian':{},'lactose':{}};
+    
+	f = open('lactose.csv', 'r')
+	lactoseList = f.read().split('\n');
+	for l in lactoseList:
+		substitutes['lactose'][l.split(',')[0].lower()] = l.split(',')[1].lower();
+		substitutes['vegan'][l.split(',')[0].lower()] = l.split(',')[1].lower();
+    
+	f = open('VegetarianSubstitutions.csv', 'r')
+	vegList = f.read().split('\n');
+	for l in vegList:
+		substitutes['vegetarian'][l.split(',')[0].lower()] = l.split(',')[1].lower();
+		substitutes['vegan'][l.split(',')[0].lower()] = l.split(',')[1].lower();
+    
+	ingredients = [];
+    
+	for i in recipe:
+		ingredName = i['ingredient'];
+		if ',' in ingredName:
+			ingredName = word_tokenize(ingredName.split(',')[0]);
+			ingredName = ingredName[len(ingredName) - 1];
+		iwords = word_tokenize(ingredName);
+		if len(iwords) > 0:
+			ingredName = iwords[len(iwords) - 1];
+		else:
+			ingredName = "undetermined";
+        
+		ingred = Ingredient(ingredName);
+		ingred.form.append(i['form']);
+		if i['quantity']:
+			ingred.quantity = i['quantity'];
+		else:
+			ingred.quantity = 1;
+		ingred.unit = i['measurement'];
+		ingred.substitutes = substitutes;
+		ingredients.append(ingred);
+    
+    
+	# Convert to lowercase and remove periods
+	recipeText = recipeText.lower();
+	recipeText = re.sub('[.]','',recipeText);
+    
+	# Create a new flow chart object and add all ingredients to
+	myrfc = RecipeFlowchart();
+    
+	for i in ingredients:
+		myrfc.addIngredient(i);
+    
+	# Extract the utensils and pass them to the flowchart
+	utensils = parseUtensils(recipeText);
+    
+	for u in utensils:
+		myrfc.utensils.append(u);
+    
+	# Now that the flow chart has its data, initialize it
+	myrfc.setupNodes();
+    
+	# Convert the recipe to a list of words
+	recipeText = word_tokenize(recipeText);
+    
+	# Pass each word into the flowchart
+	for i in recipeText:
+		myrfc.step(i);
+		
+		
+	jsonOutput = myrfc.myrecipe.getJSON();
+	return jsonOutput
+
 # Given a recipe, convert it to a Recipe object
 def parseStringRecipe (istring):
 	
@@ -513,3 +594,4 @@ def parseStringRecipe (istring):
 
 recipeURL = raw_input("Enter a recipe URL: ")
 parseStringRecipe(recipeURL);
+print(jsonRecipeOutput(recipeURL));
